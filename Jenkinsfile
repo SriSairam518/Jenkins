@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_IMAGE = "valakatisrisairam/my-k8s-app"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
     stages {
 
         stage('Checkout from GitHub') {
@@ -19,19 +24,24 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh """
-                docker build -t my-k8s-app:${BUILD_NUMBER}  .
-                docker tag my-k8s-app:${BUILD_NUMBER} valakatisrisairam/my-k8s-app:${BUILD_NUMBER}"
+                docker build -t $DOCKER_IMAGE:$IMAGE_TAG .
+                docker tag $DOCKER_IMAGE:$IMAGE_TAG $DOCKER_IMAGE:latest
                 """
             }
         }
 
-       stage('Push Docker Image){
-       	steps{
-       		sh """
-       			withDockerRegistry([credentialsId : 'dockerhub-creds', url : '']){
-       				sh "docker push ${Docker_IMAGE}"
-       			}
-       	}
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    withDockerRegistry([credentialsId: 'dockerhub-creds', url: '']) {
+                        sh """
+                        docker push $DOCKER_IMAGE:$IMAGE_TAG
+                        docker push $DOCKER_IMAGE:latest
+                        """
+                    }
+                }
+            }
+        }
     }
 
     post {
